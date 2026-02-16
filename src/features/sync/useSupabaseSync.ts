@@ -1,14 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { usePresentationStore } from '@/store/presentationStore';
 
 export function useSupabaseSync(isPresenter: boolean) {
     const { setSlide, startExam, stopExam, currentSlide, examStarted, examStartTime } = usePresentationStore();
+    const channelRef = useRef<any>(null);
 
     // Subscribe to changes (everyone)
     useEffect(() => {
+        // Clean up previous subscription if exists
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+        }
+
         const channel = supabase
-            .channel('presentation_state')
+            .channel('presentation_sync')
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'presentation_state', filter: 'id=eq.1' },
@@ -24,7 +30,6 @@ export function useSupabaseSync(isPresenter: boolean) {
 
                     if (newState.is_exam_started !== undefined) {
                         if (newState.is_exam_started) {
-                            // Determine start time from server
                             const serverStartTime = newState.exam_start_time;
                             startExam(serverStartTime);
                         } else if (!newState.is_exam_started) {
@@ -33,7 +38,15 @@ export function useSupabaseSync(isPresenter: boolean) {
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Realtime subscription active!');
+                } else {
+                    console.log('Realtime subscription status:', status);
+                }
+            });
+
+        channelRef.current = channel;
 
         // Initial fetch
         const fetchState = async () => {
@@ -52,7 +65,9 @@ export function useSupabaseSync(isPresenter: boolean) {
         fetchState();
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+            }
         };
     }, [isPresenter, setSlide, startExam, stopExam]);
 
@@ -63,12 +78,12 @@ export function useSupabaseSync(isPresenter: boolean) {
         const updateServer = async () => {
             const { error } = await supabase
                 .from('presentation_state')
-                .upsert({
-                    id: 1,
+                .update({
                     current_slide: currentSlide,
                     is_exam_started: examStarted,
                     exam_start_time: examStartTime
-                });
+                })
+                .eq('id', 1);
 
             if (error) console.error('Error updating state:', error);
         };
