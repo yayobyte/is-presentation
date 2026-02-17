@@ -9,8 +9,8 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showClock = true }: MainLayoutProps) {
     return (
-        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-            <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background/50 backdrop-blur-sm border-b border-border/40">
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
+            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/40">
                 <div className="font-display font-bold text-xl text-primary">
                     IS3 Talk
                 </div>
@@ -19,7 +19,7 @@ export function MainLayout({ children, showClock = true }: MainLayoutProps) {
                     <ThemeToggle />
                 </div>
             </header>
-            <main className="pt-20 px-4 min-h-screen">
+            <main className="flex-1 px-4 py-8">
                 {children}
             </main>
         </div>
