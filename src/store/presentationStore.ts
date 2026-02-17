@@ -19,7 +19,7 @@ export const usePresentationStore = create<PresentationState>((set) => ({
     mode: 'talk',
     examStarted: false,
     examStartTime: null,
-    examDuration: 600, // 10 minutes default
+    examDuration: 1200, // 20 minutes
 
     setSlide: (slide) => set({ currentSlide: slide }),
     setMode: (mode) => set({ mode }),

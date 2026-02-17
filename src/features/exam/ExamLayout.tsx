@@ -229,7 +229,7 @@ export default function ExamLayout() {
                     <p className="text-sm text-muted-foreground">
                         Question {currentQuestion + 1} of {QUESTIONS.length}
                     </p>
-                    <h2 className="text-lg font-bold text-primary">{question.category}</h2>
+                    <h2 className="text-3xl font-bold text-primary">{question.category}</h2>
                     <p className="text-xs text-muted-foreground">({categoryIndex} of {categoryQuestions.length} in category)</p>
                 </div>
                 <div className="text-right space-y-1">
@@ -322,10 +322,10 @@ export default function ExamLayout() {
                         key={idx}
                         onClick={() => setCurrentQuestion(idx)}
                         className={`w-2.5 h-2.5 rounded-full transition-colors ${idx === currentQuestion
-                                ? 'bg-primary scale-125'
-                                : answers[QUESTIONS[idx].id] !== undefined
-                                    ? 'bg-primary/50'
-                                    : 'bg-secondary'
+                            ? 'bg-primary scale-125'
+                            : answers[QUESTIONS[idx].id] !== undefined
+                                ? 'bg-primary/50'
+                                : 'bg-secondary'
                             }`}
                     />
                 ))}

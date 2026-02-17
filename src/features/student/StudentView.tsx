@@ -12,7 +12,7 @@ export default function StudentView() {
     useSupabaseSync(false);
 
     return (
-        <MainLayout showClock={examStarted}>
+        <MainLayout showClock={!examStarted}>
             {examStarted ? (
                 <ExamLayout />
             ) : (
