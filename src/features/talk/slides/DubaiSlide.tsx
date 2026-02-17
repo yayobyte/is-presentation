@@ -15,9 +15,9 @@ const DUBAI_CAREER = [
         year: '2017',
         company: 'Mashreq Bank',
         role: 'Senior Developer',
-        desc: 'Banking learning path. Learned enterprise-scale financial systems, compliance, and security-first development.',
+        desc: 'Banking learning path. Managed operations and projects for UAE and Singapore markets. Learned enterprise-scale financial systems, compliance, and security-first development.',
         icon: Landmark,
-        flag: '🇦🇪',
+        flag: '🇦🇪 🇸🇬',
     },
     {
         year: '2019',

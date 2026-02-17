@@ -55,6 +55,7 @@ export default function ColombiaSlide() {
                                 Working with telecom giants on large-scale digital transformation.
                             </p>
                             <div className="flex flex-wrap gap-1.5">
+                                <span className="px-2 py-0.5 bg-primary/10 text-xs rounded text-muted-foreground">🇮🇱 Israel</span>
                                 <span className="px-2 py-0.5 bg-primary/10 text-xs rounded text-muted-foreground">🇮🇳 India</span>
                                 <span className="px-2 py-0.5 bg-primary/10 text-xs rounded text-muted-foreground">🇬🇧 UK</span>
                                 <span className="px-2 py-0.5 bg-primary/10 text-xs rounded text-muted-foreground">🇧🇬 Bulgaria</span>

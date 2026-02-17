@@ -53,6 +53,9 @@ export default function ProfileSlide() {
                         <p className="text-lg lg:text-xl font-semibold text-foreground">
                             Full-Stack Lead Engineer
                         </p>
+                        <p className="text-lg lg:text-xl font-semibold text-primary/80 italic">
+                            Life & Career Coach
+                        </p>
                     </div>
 
                     {/* Social Links */}
@@ -112,7 +115,7 @@ export default function ProfileSlide() {
 
                 <Card className="bg-gradient-to-br from-card to-secondary/50">
                     <CardContent className="p-6 text-center">
-                        <p className="text-3xl font-bold text-primary mb-1">9</p>
+                        <p className="text-3xl font-bold text-primary mb-1">11</p>
                         <p className="text-sm text-muted-foreground mb-3">Countries Worked In/For</p>
                         <div className="flex flex-wrap gap-1.5 justify-center text-xs text-muted-foreground">
                             <span className="px-2 py-1 bg-primary/10 rounded">🇦🇪 UAE</span>
@@ -124,14 +127,34 @@ export default function ProfileSlide() {
                             <span className="px-2 py-1 bg-primary/10 rounded">🇬🇧 UK</span>
                             <span className="px-2 py-1 bg-primary/10 rounded">🇨🇴 Colombia</span>
                             <span className="px-2 py-1 bg-primary/10 rounded">🇰🇪 Kenya</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded">🇮🇱 Israel</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded">🇸🇬 Singapore</span>
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-card to-secondary/50">
                     <CardContent className="p-6 text-center">
-                        <p className="text-3xl font-bold text-primary mb-1">∞</p>
-                        <p className="text-sm text-muted-foreground">Lines of Code</p>
+                        <p className="text-3xl font-bold text-primary mb-1">Tech Stack</p>
+                        <p className="text-sm text-muted-foreground mb-3">Core Technologies</p>
+                        <div className="flex flex-wrap gap-1.5 justify-center text-xs text-muted-foreground">
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Node.js</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">React & React Native</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">TypeScript</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Supabase & Firebase</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Express.js</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Material UI</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">PHP (Laravel, Yii)</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Chakra-UI</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">SQLite</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">PostgreSQL</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">MySQL</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">MongoDB</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Redis</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Docker</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Git</span>
+                            <span className="px-2 py-1 bg-primary/10 rounded font-medium">Jira</span>
+                        </div>
                     </CardContent>
                 </Card>
             </motion.div>
