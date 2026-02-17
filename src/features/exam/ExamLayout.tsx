@@ -1,45 +1,105 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { QUESTIONS, CATEGORIES } from './questions';
-import { findStudentById } from './students';
 import { supabase } from '@/lib/supabase';
 import ResultsView from './ResultsView';
-import { ChevronLeft, ChevronRight, User, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, AlertCircle, Clock } from 'lucide-react';
+
+const EXAM_DURATION_SECONDS = 20 * 60; // 20 minutes
 
 export default function ExamLayout() {
     const [studentId, setStudentId] = useState('');
     const [studentName, setStudentName] = useState('');
     const [error, setError] = useState('');
+    const [validating, setValidating] = useState(false);
     const [started, setStarted] = useState(false);
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [answers, setAnswers] = useState<Record<string, number>>({});
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_SECONDS);
 
-    const handleValidateStudent = () => {
+    // ── Timer ──
+    useEffect(() => {
+        if (!started || submitted) return;
+
+        const interval = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    handleSubmit();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [started, submitted]);
+
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleValidateStudent = async () => {
         setError('');
-        const student = findStudentById(studentId);
-        if (student) {
+        setValidating(true);
+
+        try {
+            // Check if student exists in the database
+            const { data: student, error: fetchError } = await supabase
+                .from('students')
+                .select('name')
+                .eq('id', studentId.trim())
+                .single();
+
+            if (fetchError || !student) {
+                setError('Student ID not found. Please check your document number.');
+                setValidating(false);
+                return;
+            }
+
+            // Check if student already submitted
+            const { data: existing } = await supabase
+                .from('exam_submissions')
+                .select('id')
+                .eq('student_id', studentId.trim())
+                .limit(1);
+
+            if (existing && existing.length > 0) {
+                setError('You have already submitted your assessment. Only one attempt is allowed.');
+                setValidating(false);
+                return;
+            }
+
             setStudentName(student.name);
-        } else {
-            setError('Student ID not found. Please check your document number.');
+        } catch {
+            setError('Connection error. Please try again.');
         }
+
+        setValidating(false);
     };
 
     const handleStart = () => {
-        if (studentName) setStarted(true);
+        if (studentName) {
+            setStarted(true);
+            setTimeLeft(EXAM_DURATION_SECONDS);
+        }
     };
 
     const handleSelectOption = (questionId: string, optionIndex: number) => {
         setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
+        if (submitting || submitted) return;
         setSubmitting(true);
 
-        // Calculate category scores
         const categoryScores: Record<string, number> = {};
         for (const cat of CATEGORIES) {
             const catQuestions = QUESTIONS.filter(q => q.category === cat);
@@ -69,7 +129,7 @@ export default function ExamLayout() {
 
         setSubmitted(true);
         setSubmitting(false);
-    };
+    }, [answers, studentId, studentName, submitting, submitted]);
 
     // ── Entry Screen ──
     if (!started) {
@@ -84,6 +144,10 @@ export default function ExamLayout() {
                         <p className="text-sm text-muted-foreground">
                             This is NOT to disqualify you — it's to understand your position in the industry.
                         </p>
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>20 minutes • One attempt only</span>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -104,8 +168,8 @@ export default function ExamLayout() {
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                                     placeholder="Enter your document number"
                                 />
-                                <Button onClick={handleValidateStudent} disabled={!studentId.trim()}>
-                                    Verify
+                                <Button onClick={handleValidateStudent} disabled={!studentId.trim() || validating}>
+                                    {validating ? '...' : 'Verify'}
                                 </Button>
                             </div>
                         </div>
@@ -155,6 +219,7 @@ export default function ExamLayout() {
     const categoryIndex = categoryQuestions.indexOf(question) + 1;
     const isLastQuestion = currentQuestion === QUESTIONS.length - 1;
     const allAnswered = Object.keys(answers).length === QUESTIONS.length;
+    const isUrgent = timeLeft <= 120; // last 2 minutes
 
     return (
         <div className="max-w-2xl mx-auto p-4 space-y-6">
@@ -167,8 +232,12 @@ export default function ExamLayout() {
                     <h2 className="text-lg font-bold text-primary">{question.category}</h2>
                     <p className="text-xs text-muted-foreground">({categoryIndex} of {categoryQuestions.length} in category)</p>
                 </div>
-                <div className="text-right text-sm text-muted-foreground">
-                    <span className="font-bold text-foreground">{studentName}</span>
+                <div className="text-right space-y-1">
+                    <div className={`flex items-center gap-1 text-sm font-mono font-bold ${isUrgent ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                        <Clock className="h-4 w-4" />
+                        {formatTime(timeLeft)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{studentName}</p>
                 </div>
             </div>
 
@@ -253,10 +322,10 @@ export default function ExamLayout() {
                         key={idx}
                         onClick={() => setCurrentQuestion(idx)}
                         className={`w-2.5 h-2.5 rounded-full transition-colors ${idx === currentQuestion
-                            ? 'bg-primary scale-125'
-                            : answers[QUESTIONS[idx].id] !== undefined
-                                ? 'bg-primary/50'
-                                : 'bg-secondary'
+                                ? 'bg-primary scale-125'
+                                : answers[QUESTIONS[idx].id] !== undefined
+                                    ? 'bg-primary/50'
+                                    : 'bg-secondary'
                             }`}
                     />
                 ))}

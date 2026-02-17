@@ -47,3 +47,22 @@ create policy "Allow presenter to read submissions"
 on public.exam_submissions for select
 to public
 using (true);
+
+-- ══════════════════════════════════════════
+-- Students table
+-- ══════════════════════════════════════════
+create table public.students (
+  id text primary key,
+  name text not null
+);
+
+alter table public.students enable row level security;
+
+create policy "Allow public read access to students"
+on public.students for select
+to public
+using (true);
+
+-- Insert all enrolled students
+insert into public.students (id, name) values
+  ('1111', 'Estudiante de Prueba'),
