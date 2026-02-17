@@ -19,7 +19,7 @@ export function MainLayout({ children, showClock = true }: MainLayoutProps) {
                     <ThemeToggle />
                 </div>
             </header>
-            <main className="flex-1 px-4 py-8">
+            <main className="flex-1 px-4 py-12">
                 {children}
             </main>
         </div>

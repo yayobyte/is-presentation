@@ -33,8 +33,9 @@ export default function CurrentSlide() {
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                className="grid grid-cols-1 lg:grid-cols-3 gap-6"
             >
+                {/* 1. Dubai & Saudi */}
                 <motion.div variants={item}>
                     <Card className="h-full bg-gradient-to-br from-card to-secondary/50">
                         <CardContent className="p-6 flex flex-col items-center text-center space-y-4">

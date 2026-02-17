@@ -16,8 +16,8 @@ export default function StudentView() {
             {examStarted ? (
                 <ExamLayout />
             ) : (
-                <div className="max-w-6xl mx-auto h-[80vh] flex items-center justify-center">
-                    <Card className="min-h-[400px] w-full flex items-center justify-center bg-transparent border-none shadow-none text-foreground">
+                <div className="max-w-6xl mx-auto min-h-[80vh] flex flex-col justify-center py-8">
+                    <Card className="w-full bg-transparent border-none shadow-none text-foreground">
                         <SlideDeck />
                     </Card>
                 </div>

@@ -17,7 +17,7 @@ export default function SlideDeck() {
     const CurrentSlideComponent = SLIDES[currentSlide] || (() => <div>End of Presentation</div>);
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-8">
+        <div className="w-full flex justify-center py-4 md:py-8">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentSlide}
@@ -25,7 +25,7 @@ export default function SlideDeck() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -50 }}
                     transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="w-full max-w-6xl"
+                    className="w-full max-w-5xl mx-auto px-4"
                 >
                     <CurrentSlideComponent />
                 </motion.div>
