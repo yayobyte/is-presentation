@@ -1,11 +1,13 @@
 import { usePresentationStore } from '@/store/presentationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 // Slides
+import ProfileSlide from './slides/ProfileSlide';
 import IntroSlide from './slides/IntroSlide';
 import CareerSlide from './slides/CareerSlide';
 import CurrentSlide from './slides/CurrentSlide';
 
 const SLIDES = [
+    ProfileSlide,
     CurrentSlide,
     IntroSlide,
     CareerSlide,
