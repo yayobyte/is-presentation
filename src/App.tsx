@@ -13,7 +13,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/40">
-        <span className="font-display font-bold text-xl text-primary">Cristian (Yayo) - Market Talk</span>
+        <span className="font-display font-bold text-xl text-primary">Cristian (Yayo)</span>
         <ThemeToggle />
       </header>
 
