@@ -186,7 +186,7 @@ export default function ExamLayout() {
                             <label htmlFor="studentId" className="text-sm font-medium">
                                 Student ID (Document Number)
                             </label>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 mt-4">
                                 <input
                                     id="studentId"
                                     type="text"
@@ -231,7 +231,7 @@ export default function ExamLayout() {
 
                         <Button
                             className="w-full"
-                            size="lg"
+                            size="sm"
                             onClick={handleStart}
                             disabled={!studentName}
                         >
