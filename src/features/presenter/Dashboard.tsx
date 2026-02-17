@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
+import SlideDeck from '@/features/talk/SlideDeck';
 
 export default function PresenterDashboard() {
     const { currentSlide, setSlide, startExam, stopExam, examStarted } = usePresentationStore();
@@ -13,6 +14,24 @@ export default function PresenterDashboard() {
     return (
         <MainLayout>
             <div className="max-w-4xl mx-auto space-y-8">
+                {/* Live Preview */}
+                <Card className="overflow-hidden bg-background">
+                    <CardHeader>
+                        <CardTitle>Live Preview - What Students See</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex justify-center bg-muted/20 p-8">
+                        {/* 
+                          Container mimics a 16:9 screen. 
+                          We scale the SlideDeck down to fit. 
+                        */}
+                        <div className="relative w-full aspect-video border rounded-lg overflow-hidden shadow-sm bg-background">
+                            <div className="absolute inset-0 transform scale-[0.5] origin-top-left w-[200%] h-[200%] pointer-events-none">
+                                <SlideDeck />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
                         <CardTitle>Slide Control</CardTitle>
