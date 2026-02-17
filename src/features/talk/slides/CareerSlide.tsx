@@ -9,7 +9,7 @@ export default function CareerSlide() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
             >
-                <h1 className="text-5xl font-display font-bold text-primary mb-2">Phase 2: The Ascent</h1>
+                <h1 className="text-5xl font-display font-bold text-primary mb-2">How I Made It Possible</h1>
                 <h2 className="text-2xl text-muted-foreground">From OPA to Endava</h2>
             </motion.div>
 

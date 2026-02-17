@@ -6,9 +6,9 @@ import CareerSlide from './slides/CareerSlide';
 import CurrentSlide from './slides/CurrentSlide';
 
 const SLIDES = [
+    CurrentSlide,
     IntroSlide,
     CareerSlide,
-    CurrentSlide,
 ];
 
 export default function SlideDeck() {

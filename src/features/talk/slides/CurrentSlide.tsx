@@ -25,7 +25,7 @@ export default function CurrentSlide() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
             >
-                <h1 className="text-5xl font-display font-bold text-primary mb-2">Phase 3: The Summit</h1>
+                <h1 className="text-5xl font-display font-bold text-primary mb-2">The Summit</h1>
                 <h2 className="text-2xl text-muted-foreground">International Engineer & Leader</h2>
             </motion.div>
 

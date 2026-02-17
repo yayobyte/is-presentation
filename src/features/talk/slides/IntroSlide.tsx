@@ -9,8 +9,8 @@ export default function IntroSlide() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
             >
-                <h1 className="text-5xl font-display font-bold text-primary mb-2">Phase 1: The Struggle</h1>
-                <h2 className="text-2xl text-muted-foreground">Medellín & The Violent Decade</h2>
+                <h1 className="text-5xl font-display font-bold text-primary mb-2">The Struggle</h1>
+                <h2 className="text-2xl text-muted-foreground">It was not always a smooth plan</h2>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
