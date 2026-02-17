@@ -1,13 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { QUESTIONS, CATEGORIES } from './questions';
+import { QUESTIONS, CATEGORIES, MAX_POINTS_PER_CATEGORY } from './questions';
 import { supabase } from '@/lib/supabase';
 import ResultsView from './ResultsView';
 import { ChevronLeft, ChevronRight, User, AlertCircle, Clock } from 'lucide-react';
 
 const EXAM_DURATION_SECONDS = 20 * 60; // 20 minutes
+
+// Helper to shuffle an array
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
 
 export default function ExamLayout() {
     const [studentId, setStudentId] = useState('');
@@ -19,9 +29,65 @@ export default function ExamLayout() {
     const [answers, setAnswers] = useState<Record<string, number>>({});
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_SECONDS);
+    const [, setTimeLeft] = useState(EXAM_DURATION_SECONDS);
+    const [previousResults, setPreviousResults] = useState<{
+        answers: Record<string, number>,
+        name: string,
+        categoryScores: Record<string, number>
+    } | null>(null);
+    const [currentCategoryScores, setCurrentCategoryScores] = useState<Record<string, number> | null>(null);
 
-    // ── Timer ──
+    // Pre-shuffle options for each question once per session
+    const shuffledQuestions = useMemo(() => {
+        return QUESTIONS.map(q => ({
+            ...q,
+            shuffledOptions: shuffleArray(q.options)
+        }));
+    }, []);
+
+    const handleSubmit = useCallback(async () => {
+        if (submitting || submitted) return;
+        setSubmitting(true);
+
+        const categoryScores: Record<string, number> = {};
+        for (const cat of CATEGORIES) {
+            const catQuestions = shuffledQuestions.filter(q => q.category === cat);
+            let score = 0;
+            for (const q of catQuestions) {
+                const selectedIdx = answers[q.id];
+                if (selectedIdx !== undefined) {
+                    // Check if it's the "I don't know" option (idx 4)
+                    if (selectedIdx === 4) {
+                        score += 0;
+                    } else {
+                        // Get points from the shuffled option
+                        score += q.shuffledOptions[selectedIdx].points;
+                    }
+                }
+            }
+            categoryScores[cat] = score;
+        }
+
+        const totalScore = Object.values(categoryScores).reduce((a, b) => a + b, 0);
+        setCurrentCategoryScores(categoryScores);
+
+        try {
+            await supabase.from('exam_submissions').insert({
+                student_id: studentId,
+                student_name: studentName,
+                answers,
+                category_scores: categoryScores,
+                total_score: totalScore,
+            });
+        } catch (err) {
+            console.error('Failed to save submission:', err);
+        }
+
+        setSubmitted(true);
+        setSubmitting(false);
+    }, [answers, shuffledQuestions, studentId, studentName, submitting, submitted]);
+
+    // ── Timer Logic (Only for auto-submit, display is removed later) ──
     useEffect(() => {
         if (!started || submitted) return;
 
@@ -37,14 +103,7 @@ export default function ExamLayout() {
         }, 1000);
 
         return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [started, submitted]);
-
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
+    }, [started, submitted, handleSubmit]);
 
     const handleValidateStudent = async () => {
         setError('');
@@ -67,17 +126,23 @@ export default function ExamLayout() {
             // Check if student already submitted
             const { data: existing } = await supabase
                 .from('exam_submissions')
-                .select('id')
+                .select('student_name, answers, category_scores')
                 .eq('student_id', studentId.trim())
+                .order('submitted_at', { ascending: false })
                 .limit(1);
 
             if (existing && existing.length > 0) {
-                setError('You have already submitted your assessment. Only one attempt is allowed.');
-                setValidating(false);
-                return;
+                // Instead of blocking, prepare to show previous results
+                setPreviousResults({
+                    answers: existing[0].answers,
+                    name: existing[0].student_name,
+                    categoryScores: existing[0].category_scores
+                });
+                setStudentName(existing[0].student_name);
+            } else {
+                setStudentName(student.name);
+                setPreviousResults(null);
             }
-
-            setStudentName(student.name);
         } catch {
             setError('Connection error. Please try again.');
         }
@@ -86,7 +151,9 @@ export default function ExamLayout() {
     };
 
     const handleStart = () => {
-        if (studentName) {
+        if (previousResults) {
+            setSubmitted(true);
+        } else if (studentName) {
             setStarted(true);
             setTimeLeft(EXAM_DURATION_SECONDS);
         }
@@ -96,43 +163,8 @@ export default function ExamLayout() {
         setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
     };
 
-    const handleSubmit = useCallback(async () => {
-        if (submitting || submitted) return;
-        setSubmitting(true);
-
-        const categoryScores: Record<string, number> = {};
-        for (const cat of CATEGORIES) {
-            const catQuestions = QUESTIONS.filter(q => q.category === cat);
-            let score = 0;
-            for (const q of catQuestions) {
-                const selectedIndex = answers[q.id];
-                if (selectedIndex !== undefined) {
-                    score += q.options[selectedIndex].points;
-                }
-            }
-            categoryScores[cat] = score;
-        }
-
-        const totalScore = Object.values(categoryScores).reduce((a, b) => a + b, 0);
-
-        try {
-            await supabase.from('exam_submissions').insert({
-                student_id: studentId,
-                student_name: studentName,
-                answers,
-                category_scores: categoryScores,
-                total_score: totalScore,
-            });
-        } catch (err) {
-            console.error('Failed to save submission:', err);
-        }
-
-        setSubmitted(true);
-        setSubmitting(false);
-    }, [answers, studentId, studentName, submitting, submitted]);
-
     // ── Entry Screen ──
-    if (!started) {
+    if (!started && !submitted) {
         return (
             <div className="max-w-md mx-auto min-h-[60vh] flex flex-col items-center justify-center space-y-6 px-4">
                 <Card className="w-full">
@@ -146,7 +178,7 @@ export default function ExamLayout() {
                         </p>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            <span>20 minutes • One attempt only</span>
+                            <span>20 minutes • Assessment Mode</span>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -189,6 +221,11 @@ export default function ExamLayout() {
                             >
                                 <p className="text-sm text-muted-foreground">Welcome,</p>
                                 <p className="text-lg font-bold text-primary">{studentName}</p>
+                                {previousResults && (
+                                    <p className="text-xs text-amber-600 mt-2 font-medium">
+                                        You have already submitted this assessment. Clicking start will show your previous result.
+                                    </p>
+                                )}
                             </motion.div>
                         )}
 
@@ -198,7 +235,7 @@ export default function ExamLayout() {
                             onClick={handleStart}
                             disabled={!studentName}
                         >
-                            Start Assessment ({QUESTIONS.length} questions)
+                            {previousResults ? 'View My Results' : `Start Assessment (${shuffledQuestions.length} questions)`}
                         </Button>
                     </CardContent>
                 </Card>
@@ -208,36 +245,46 @@ export default function ExamLayout() {
 
     // ── Results Screen ──
     if (submitted) {
-        return <ResultsView answers={answers} studentName={studentName} />;
+        const scoresToDisplay = previousResults
+            ? previousResults.categoryScores
+            : (currentCategoryScores || {});
+
+        const categoryScoresArray = CATEGORIES.map(cat => ({
+            category: cat,
+            score: scoresToDisplay[cat] || 0,
+            max: MAX_POINTS_PER_CATEGORY
+        }));
+
+        return <ResultsView categoryScores={categoryScoresArray} studentName={studentName} />;
     }
 
     // ── Question Slide ──
-    const question = QUESTIONS[currentQuestion];
+    const question = shuffledQuestions[currentQuestion];
     const selectedOption = answers[question.id];
-    const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
-    const categoryQuestions = QUESTIONS.filter(q => q.category === question.category);
+    const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
+    const categoryQuestions = shuffledQuestions.filter(q => q.category === question.category);
     const categoryIndex = categoryQuestions.indexOf(question) + 1;
-    const isLastQuestion = currentQuestion === QUESTIONS.length - 1;
-    const allAnswered = Object.keys(answers).length === QUESTIONS.length;
-    const isUrgent = timeLeft <= 120; // last 2 minutes
+    const isLastQuestion = currentQuestion === shuffledQuestions.length - 1;
+    const allAnswered = Object.keys(answers).length === shuffledQuestions.length;
+
+    // Combine shuffled options with the fixed 5th option
+    const displayOptions = [
+        ...question.shuffledOptions,
+        { text: "I don't know", points: 0 }
+    ];
 
     return (
         <div className="max-w-2xl mx-auto p-4 space-y-6">
-            {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
                     <p className="text-sm text-muted-foreground">
-                        Question {currentQuestion + 1} of {QUESTIONS.length}
+                        Question {currentQuestion + 1} of {shuffledQuestions.length}
                     </p>
                     <h2 className="text-3xl font-bold text-primary">{question.category}</h2>
                     <p className="text-xs text-muted-foreground">({categoryIndex} of {categoryQuestions.length} in category)</p>
                 </div>
                 <div className="text-right space-y-1">
-                    <div className={`flex items-center gap-1 text-sm font-mono font-bold ${isUrgent ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
-                        <Clock className="h-4 w-4" />
-                        {formatTime(timeLeft)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{studentName}</p>
+                    <p className="text-sm font-bold text-foreground">{studentName}</p>
                 </div>
             </div>
 
@@ -267,11 +314,11 @@ export default function ExamLayout() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            {question.options.map((option, idx) => (
+                            {displayOptions.map((option, idx) => (
                                 <Button
                                     key={idx}
                                     variant={selectedOption === idx ? 'primary' : 'outline'}
-                                    className="w-full justify-start text-left min-h-[48px] h-auto whitespace-normal py-3"
+                                    className="w-full justify-start text-left min-h-[48px] h-auto whitespace-normal py-3 px-4"
                                     onClick={() => handleSelectOption(question.id, idx)}
                                 >
                                     <span className="mr-3 text-primary font-bold shrink-0">
@@ -317,13 +364,13 @@ export default function ExamLayout() {
 
             {/* Category dots */}
             <div className="flex justify-center gap-1.5 flex-wrap pt-2">
-                {QUESTIONS.map((_, idx) => (
+                {shuffledQuestions.map((_, idx) => (
                     <button
                         key={idx}
                         onClick={() => setCurrentQuestion(idx)}
                         className={`w-2.5 h-2.5 rounded-full transition-colors ${idx === currentQuestion
                             ? 'bg-primary scale-125'
-                            : answers[QUESTIONS[idx].id] !== undefined
+                            : answers[shuffledQuestions[idx].id] !== undefined
                                 ? 'bg-primary/50'
                                 : 'bg-secondary'
                             }`}

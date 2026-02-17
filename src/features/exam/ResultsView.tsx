@@ -1,26 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { QUESTIONS, CATEGORIES, MAX_POINTS_PER_CATEGORY } from './questions';
 import { motion } from 'framer-motion';
 
+interface CategoryScore {
+    category: string;
+    score: number;
+    max: number;
+}
+
 interface ResultsViewProps {
-    answers: Record<string, number>;
+    categoryScores: CategoryScore[];
     studentName: string;
 }
 
-export default function ResultsView({ answers, studentName }: ResultsViewProps) {
-    // Calculate per-category scores
-    const categoryScores = CATEGORIES.map(cat => {
-        const catQuestions = QUESTIONS.filter(q => q.category === cat);
-        let score = 0;
-        for (const q of catQuestions) {
-            const selectedIndex = answers[q.id];
-            if (selectedIndex !== undefined) {
-                score += q.options[selectedIndex].points;
-            }
-        }
-        return { category: cat, score, max: MAX_POINTS_PER_CATEGORY };
-    });
-
+export default function ResultsView({ categoryScores, studentName }: ResultsViewProps) {
     const totalScore = categoryScores.reduce((a, b) => a + b.score, 0);
     const totalMax = categoryScores.reduce((a, b) => a + b.max, 0);
     const percentage = Math.round((totalScore / totalMax) * 100);
