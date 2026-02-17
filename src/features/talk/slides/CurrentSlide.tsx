@@ -30,12 +30,11 @@ export default function CurrentSlide() {
             </motion.div>
 
             <motion.div
+                className="grid grid-cols-1 lg:grid-cols-3 gap-6"
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="grid grid-cols-1 lg:grid-cols-3 gap-6"
             >
-                {/* 1. Dubai & Saudi */}
                 <motion.div variants={item}>
                     <Card className="h-full bg-gradient-to-br from-card to-secondary/50">
                         <CardContent className="p-6 flex flex-col items-center text-center space-y-4">

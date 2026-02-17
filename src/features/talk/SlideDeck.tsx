@@ -2,15 +2,19 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 // Slides
 import ProfileSlide from './slides/ProfileSlide';
+import CurrentSlide from './slides/CurrentSlide';
 import IntroSlide from './slides/IntroSlide';
 import CareerSlide from './slides/CareerSlide';
-import CurrentSlide from './slides/CurrentSlide';
+import DubaiSlide from './slides/DubaiSlide';
+import ColombiaSlide from './slides/ColombiaSlide';
 
 const SLIDES = [
-    ProfileSlide,
-    CurrentSlide,
-    IntroSlide,
-    CareerSlide,
+    ProfileSlide,      // 0: Who I am
+    CurrentSlide,      // 1: The Summit (overview)
+    IntroSlide,        // 2: The Struggle
+    CareerSlide,       // 3: How I Made It Possible (OPA & Endava)
+    DubaiSlide,        // 4: The Dubai Chapter
+    ColombiaSlide,     // 5: The Return to Colombia
 ];
 
 export default function SlideDeck() {
