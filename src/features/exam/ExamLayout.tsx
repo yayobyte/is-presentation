@@ -345,7 +345,7 @@ export default function ExamLayout() {
 
                 {isLastQuestion ? (
                     <Button
-                        size="lg"
+                        size="sm"
                         onClick={handleSubmit}
                         disabled={!allAnswered || submitting}
                     >
