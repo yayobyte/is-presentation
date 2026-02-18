@@ -7,10 +7,19 @@ import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
 import SlideDeck from '@/features/talk/SlideDeck';
 
 export default function PresenterDashboard() {
-    const { currentSlide, setSlide, startExam, stopExam, examStarted } = usePresentationStore();
+    const {
+        currentSlide, setSlide, startExam, stopExam,
+        examStarted, isTimerEnabled, setTimerEnabled
+    } = usePresentationStore();
 
     // Enable sync as presenter (pushes changes)
     useSupabaseSync(true);
+
+    const handleStopExam = () => {
+        if (window.confirm('Are you sure you want to STOP the exam for all students? This will prevent any further submissions.')) {
+            stopExam();
+        }
+    };
 
     return (
         <MainLayout>
@@ -53,16 +62,40 @@ export default function PresenterDashboard() {
                         <CardTitle>Session Control</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex gap-4">
-                            {examStarted ? (
-                                <Button variant="destructive" size="lg" onClick={stopExam} className="w-full">Stop Exam</Button>
-                            ) : (
-                                <Button size="lg" onClick={() => startExam()} className="w-full">Start Exam</Button>
+                        <div className="flex flex-col space-y-4">
+                            {!examStarted && (
+                                <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-lg border border-border/50">
+                                    <input
+                                        type="checkbox"
+                                        id="timer-toggle"
+                                        checked={isTimerEnabled}
+                                        onChange={(e) => setTimerEnabled(e.target.checked)}
+                                        className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                    <label htmlFor="timer-toggle" className="text-sm font-medium cursor-pointer">
+                                        Enable 20-minute counter for students
+                                    </label>
+                                </div>
                             )}
+
+                            <div className="flex gap-4">
+                                {examStarted ? (
+                                    <Button variant="destructive" size="lg" onClick={handleStopExam} className="w-full">Stop Exam</Button>
+                                ) : (
+                                    <Button size="lg" onClick={() => startExam()} className="w-full">
+                                        Start Exam {isTimerEnabled ? '(with 20m timer)' : '(no timer)'}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
 
-                        {examStarted && (
+                        {examStarted && isTimerEnabled && (
                             <PresenterTimer />
+                        )}
+                        {examStarted && !isTimerEnabled && (
+                            <div className="p-6 bg-secondary/10 rounded-xl border border-border/50 text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Exam is running WITHOUT a timer limit.</p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

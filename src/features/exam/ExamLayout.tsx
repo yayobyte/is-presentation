@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { QUESTIONS, CATEGORIES, MAX_POINTS_PER_CATEGORY } from './questions';
 import { supabase } from '@/lib/supabase';
+import { usePresentationStore } from '@/store/presentationStore';
 import ResultsView from './ResultsView';
 import { ChevronLeft, ChevronRight, User, AlertCircle, Clock } from 'lucide-react';
 
@@ -20,6 +21,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default function ExamLayout() {
+    const { isTimerEnabled } = usePresentationStore();
     const [studentId, setStudentId] = useState('');
     const [studentName, setStudentName] = useState('');
     const [error, setError] = useState('');
@@ -89,7 +91,7 @@ export default function ExamLayout() {
 
     // ── Timer Logic (Only for auto-submit, display is removed later) ──
     useEffect(() => {
-        if (!started || submitted) return;
+        if (!started || submitted || !isTimerEnabled) return;
 
         const interval = setInterval(() => {
             setTimeLeft(prev => {
@@ -103,7 +105,7 @@ export default function ExamLayout() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [started, submitted, handleSubmit]);
+    }, [started, submitted, handleSubmit, isTimerEnabled]);
 
     const handleValidateStudent = async () => {
         setError('');
@@ -177,8 +179,15 @@ export default function ExamLayout() {
                             This is NOT to disqualify you — it's to understand your position in the industry.
                         </p>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>20 minutes • Assessment Mode</span>
+                            {isTimerEnabled && (
+                                <>
+                                    <Clock className="h-4 w-4" />
+                                    <span>20 minutes • Assessment Mode</span>
+                                </>
+                            )}
+                            {!isTimerEnabled && (
+                                <span>Assessment Mode</span>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
