@@ -1,19 +1,52 @@
--- Create a table to hold the presentation state
-create table public.presentation_state (
+-- ══════════════════════════════════════════════════════════════════════════════
+-- SUPABASE INITIAL SETUP SCRIPT
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Instructions: Run this entire script in the Supabase SQL Editor.
+-- It will create tables, set up RLS policies, and initialize data.
+-- It is idempotent (safe to run multiple times).
+
+-- 1. Table: Presentation State
+create table if not exists public.presentation_state (
   id bigint primary key generated always as identity,
   current_slide integer default 0,
   is_exam_started boolean default false,
   exam_start_time bigint,
+  is_timer_enabled boolean default false, -- Add this if missing
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Insert the initial state (ID=1)
+-- Initialize state if table is empty
 insert into public.presentation_state (id, current_slide, is_exam_started)
 overriding system value
-values (1, 0, false);
+select 1, 0, false
+where not exists (select 1 from public.presentation_state where id = 1);
 
--- Create a table for student exam submissions
-create table public.exam_submissions (
+-- 2. Table: Groups
+create table if not exists public.groups (
+  id serial primary key,
+  name text not null
+);
+
+-- Seed initial groups if empty
+insert into public.groups (id, name)
+select 1, 'Test Group 1' where not exists (select 1 from public.groups where id = 1);
+insert into public.groups (id, name)
+select 2, 'Test Group 2' where not exists (select 1 from public.groups where id = 2);
+insert into public.groups (id, name)
+select 3, 'Test Group 3' where not exists (select 1 from public.groups where id = 3);
+
+-- Sync sequence for auto-incrementing IDs
+SELECT setval(pg_get_serial_sequence('public.groups', 'id'), coalesce(max(id), 0) + 1, false) FROM public.groups;
+
+-- 3. Table: Students
+create table if not exists public.students (
+  id text primary key,
+  name text not null,
+  group_id integer references public.groups(id)
+);
+
+-- 4. Table: Exam Submissions
+create table if not exists public.exam_submissions (
   id uuid primary key default gen_random_uuid(),
   student_id text not null,
   student_name text not null,
@@ -23,86 +56,49 @@ create table public.exam_submissions (
   submitted_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Turn on Row Level Security
+-- ══════════════════════════════════════════════════════════════════════════════
+-- ROW LEVEL SECURITY (RLS)
+-- ══════════════════════════════════════════════════════════════════════════════
+
 alter table public.presentation_state enable row level security;
 alter table public.exam_submissions enable row level security;
-
--- Policies
-create policy "Allow generic read access to presentation state"
-on public.presentation_state for select
-to public
-using (true);
-
-create policy "Allow presenter update access"
-on public.presentation_state for update
-to public
-using (true); 
-
-create policy "Allow insert on presentation_state"
-on public.presentation_state for insert
-to public
-with check (true); 
-
-create policy "Allow student submissions"
-on public.exam_submissions for insert
-to public
-with check (true);
-
-create policy "Allow presenter to read submissions"
-on public.exam_submissions for select
-to public
-using (true);
-
-create policy "Allow delete submissions"
-on public.exam_submissions for delete
-to public
-using (true);
-
--- ══════════════════════════════════════════
--- Groups table
--- ══════════════════════════════════════════
-create table public.groups (
-  id serial primary key,
-  name text not null
-);
-
 alter table public.groups enable row level security;
-create policy "Allow public read access to groups"
-on public.groups for select
-to public
-using (true);
-
-insert into public.groups (id, name) values
-  (1, 'Test Group 1'),
-  (2, 'Test Group 2'),
-  (3, 'Test Group 3');
-
--- ══════════════════════════════════════════
--- Students table
--- ══════════════════════════════════════════
-create table public.students (
-  id text primary key,
-  name text not null,
-  group_id integer references public.groups(id)
-);
-
 alter table public.students enable row level security;
 
-create policy "Allow public read access to students"
-on public.students for select
-to public
-using (true);
+-- DROP existing policies to avoid duplicates on re-run
+do $$ 
+begin
+    -- Presentation State
+    drop policy if exists "Allow generic read access to presentation state" on presentation_state;
+    drop policy if exists "Allow presenter update access" on presentation_state;
+    drop policy if exists "Allow insert on presentation_state" on presentation_state;
+    -- Exam Submissions
+    drop policy if exists "Allow student submissions" on exam_submissions;
+    drop policy if exists "Allow presenter to read submissions" on exam_submissions;
+    drop policy if exists "Allow delete submissions" on exam_submissions;
+    -- Groups
+    drop policy if exists "Allow public read access to groups" on groups;
+    drop policy if exists "Allow management of groups" on groups;
+    -- Students
+    drop policy if exists "Allow public read access to students" on students;
+    drop policy if exists "Allow management of students" on students;
+exception when others then null;
+end $$;
 
-create policy "Allow management of students"
-on public.students for all
-to public
-using (true)
-with check (true);
+-- 5. Policies: Presentation State
+create policy "Allow generic read access to presentation state" on public.presentation_state for select to public using (true);
+create policy "Allow presenter update access" on public.presentation_state for update to public using (true);
+create policy "Allow insert on presentation_state" on public.presentation_state for insert to public with check (true);
 
--- Group policies
-create policy "Allow management of groups"
-on public.groups for all
-to public
-using (true)
-with check (true);
+-- 6. Policies: Exam Submissions
+create policy "Allow student submissions" on public.exam_submissions for insert to public with check (true);
+create policy "Allow presenter to read submissions" on public.exam_submissions for select to public using (true);
+create policy "Allow delete submissions" on public.exam_submissions for delete to public using (true);
 
+-- 7. Policies: Groups
+create policy "Allow public read access to groups" on public.groups for select to public using (true);
+create policy "Allow management of groups" on public.groups for all to public using (true) with check (true);
+
+-- 8. Policies: Students
+create policy "Allow public read access to students" on public.students for select to public using (true);
+create policy "Allow management of students" on public.students for all to public using (true) with check (true);

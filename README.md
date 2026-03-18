@@ -1,73 +1,55 @@
-# React + TypeScript + Vite
+# Interactive Presentation & Exam System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A real-time, synchronized presentation platform with built-in exam capabilities, built with **React**, **Vite**, and **Supabase**.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 👨‍🏫 Presenter Dashboard
+- **Live Slide Control**: Synchronize slide transitions across all student devices in real-time.
+- **Session Control**: Start and stop exams globally, with optional per-student timers.
+- **Management Center**:
+    - **Student CRM**: Register, edit, and search for students.
+    - **Group Administration**: Manage class cohorts and assignments.
+- **Results Tracking**: View aggregated group performance and individual student scores.
+- **Data Export**: Export results to CSV for external analysis.
 
-## React Compiler
+### 🎓 Student View
+- **Live Sync**: Automatically follows the presenter's slides.
+- **Timed Exams**: Interactive exam interface that activates only when the presenter triggers it.
+- **Auto-submission**: Prevents multiple submissions and handles timing out.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🏗 Architecture
 
-## Expanding the ESLint configuration
+The project follows a modular, service-oriented architecture:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **`/src/services`**: Abstraction layer for all Supabase interactions (Auth, Exam, Presentation, Students, Groups). No raw database calls are made within UI components.
+- **`/src/features`**: Domain-driven feature organization (Exam logic, Sync hooks, Presenter UI).
+- **`/src/store`**: Global state management via **Zustand** for real-time presentation state.
+- **`/src/features/shared/providers`**: Context providers for Authentication and Results aggregation.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠 Setup & Deployment
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Database Initialization
+This project requires a Supabase backend. To set up the schema:
+1. Create a new Supabase project.
+2. Go to the **SQL Editor**.
+3. Copy the contents of [`supabase_schema.sql`](./supabase_schema.sql) and run it. This script is idempotent and sets up all tables, RLS policies, and initial sequences.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Environment Variables
+Create a `.env` file in the root directory:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Local Development
+```bash
+npm install
+npm run dev
 ```
+
+## 📜 Database Schema Recap
+- `presentation_state`: Tracks slides and exam status.
+- `exam_submissions`: Stores student answers and scores.
+- `students`: Registry of authorized student IDs.
+- `groups`: Class cohorts for results aggregation.
