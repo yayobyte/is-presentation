@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { QUESTIONS, CATEGORIES, MAX_POINTS_PER_CATEGORY } from './questions';
+import type { Question, QuestionOption } from './questions';
 import { supabase } from '@/lib/supabase';
 import { usePresentationStore } from '@/store/presentationStore';
 import ResultsView from './ResultsView';
@@ -20,18 +21,40 @@ function shuffleArray<T>(array: T[]): T[] {
     return shuffled;
 }
 
+const LOCAL_STORAGE_KEY = 'is_presentation_exam_state_v1';
+
 export default function ExamLayout() {
     const { isTimerEnabled } = usePresentationStore();
-    const [studentId, setStudentId] = useState('');
-    const [studentName, setStudentName] = useState('');
+    
+    // Check local storage on initial render
+    const initialSavedState = useMemo(() => {
+        try {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+            return null;
+        }
+    }, []);
+
+    const [studentId, setStudentId] = useState<string>(initialSavedState?.studentId || '');
+    const [studentName, setStudentName] = useState<string>(initialSavedState?.studentName || '');
     const [error, setError] = useState('');
     const [validating, setValidating] = useState(false);
-    const [started, setStarted] = useState(false);
-    const [currentQuestion, setCurrentQuestion] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, number>>({});
+    const [started, setStarted] = useState<boolean>(initialSavedState?.started || false);
+    const [currentQuestion, setCurrentQuestion] = useState<number>(initialSavedState?.currentQuestion || 0);
+    const [answers, setAnswers] = useState<Record<string, number>>(initialSavedState?.answers || {});
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [, setTimeLeft] = useState(EXAM_DURATION_SECONDS);
+    
+    const [localStartTime, setLocalStartTime] = useState<number | null>(initialSavedState?.localStartTime || null);
+    const [, setTimeLeft] = useState(() => {
+        if (initialSavedState?.localStartTime) {
+            const elapsedSeconds = Math.floor((Date.now() - initialSavedState.localStartTime) / 1000);
+            return Math.max(0, EXAM_DURATION_SECONDS - elapsedSeconds);
+        }
+        return EXAM_DURATION_SECONDS;
+    });
+
     const [previousResults, setPreviousResults] = useState<{
         answers: Record<string, number>,
         name: string,
@@ -39,13 +62,36 @@ export default function ExamLayout() {
     } | null>(null);
     const [currentCategoryScores, setCurrentCategoryScores] = useState<Record<string, number> | null>(null);
 
-    // Pre-shuffle options for each question once per session
-    const shuffledQuestions = useMemo(() => {
-        return QUESTIONS.map(q => ({
+    // Pre-shuffle options for each question once per session, or load correctly
+    const [shuffledQuestions] = useState<Array<Question & { shuffledOptions: QuestionOption[] }>>(() => {
+        if (initialSavedState?.shuffledQuestions) {
+            return initialSavedState.shuffledQuestions;
+        }
+        return QUESTIONS.map((q: Question) => ({
             ...q,
             shuffledOptions: shuffleArray(q.options)
         }));
-    }, []);
+    });
+
+    // Sync to localStorage whenever relevant state changes
+    useEffect(() => {
+        if (studentName) {
+            const stateToSave = {
+                studentId,
+                studentName,
+                started,
+                currentQuestion,
+                answers,
+                shuffledQuestions,
+                localStartTime
+            };
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+            } catch (e) {
+                console.error('Failed to save exam state', e);
+            }
+        }
+    }, [studentId, studentName, started, currentQuestion, answers, shuffledQuestions, localStartTime]);
 
     const handleSubmit = useCallback(async () => {
         if (submitting || submitted) return;
@@ -81,6 +127,7 @@ export default function ExamLayout() {
                 category_scores: categoryScores,
                 total_score: totalScore,
             });
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch (err) {
             console.error('Failed to save submission:', err);
         }
@@ -91,21 +138,21 @@ export default function ExamLayout() {
 
     // ── Timer Logic (Only for auto-submit, display is removed later) ──
     useEffect(() => {
-        if (!started || submitted || !isTimerEnabled) return;
+        if (!started || submitted || !isTimerEnabled || !localStartTime) return;
 
         const interval = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    handleSubmit();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            const elapsedSeconds = Math.floor((Date.now() - localStartTime) / 1000);
+            const remaining = Math.max(0, EXAM_DURATION_SECONDS - elapsedSeconds);
+            setTimeLeft(remaining);
+            
+            if (remaining <= 0) {
+                clearInterval(interval);
+                handleSubmit();
+            }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [started, submitted, handleSubmit, isTimerEnabled]);
+    }, [started, submitted, handleSubmit, isTimerEnabled, localStartTime]);
 
     const handleValidateStudent = async () => {
         setError('');
@@ -157,6 +204,8 @@ export default function ExamLayout() {
             setSubmitted(true);
         } else if (studentName) {
             setStarted(true);
+            const now = Date.now();
+            setLocalStartTime(now);
             setTimeLeft(EXAM_DURATION_SECONDS);
         }
     };
