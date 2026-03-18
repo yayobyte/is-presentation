@@ -49,11 +49,31 @@ to public
 using (true);
 
 -- ══════════════════════════════════════════
+-- Groups table
+-- ══════════════════════════════════════════
+create table public.groups (
+  id serial primary key,
+  name text not null
+);
+
+alter table public.groups enable row level security;
+create policy "Allow public read access to groups"
+on public.groups for select
+to public
+using (true);
+
+insert into public.groups (id, name) values
+  (1, 'Test Group 1'),
+  (2, 'Test Group 2'),
+  (3, 'Test Group 3');
+
+-- ══════════════════════════════════════════
 -- Students table
 -- ══════════════════════════════════════════
 create table public.students (
   id text primary key,
-  name text not null
+  name text not null,
+  group_id integer references public.groups(id)
 );
 
 alter table public.students enable row level security;
@@ -63,6 +83,3 @@ on public.students for select
 to public
 using (true);
 
--- Insert all enrolled students
-insert into public.students (id, name) values
-  ('1111', 'Estudiante de Prueba'),
