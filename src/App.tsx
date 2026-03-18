@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { Monitor, GraduationCap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
+import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { ResultsProvider } from '@/providers/ResultsProvider';
 import PresenterDashboard from '@/features/presenter/Dashboard';
 import StudentView from '@/features/student/StudentView';
 import LoginPage from '@/features/auth/LoginPage';
@@ -100,7 +101,9 @@ function App() {
             path="/presenter"
             element={
               <ProtectedRoute>
-                <PresenterDashboard />
+                <ResultsProvider>
+                  <PresenterDashboard />
+                </ResultsProvider>
               </ProtectedRoute>
             }
           />

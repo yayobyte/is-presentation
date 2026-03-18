@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
+import { useExamResults } from '@/providers/ResultsProvider';
 import SlideDeck from '@/features/talk/SlideDeck';
 
 export default function PresenterDashboard() {
@@ -100,6 +101,8 @@ export default function PresenterDashboard() {
                     </CardContent>
                 </Card>
 
+                <PresenterResults />
+
                 <Card>
                     <CardHeader>
                         <CardTitle>Quick Links</CardTitle>
@@ -154,5 +157,63 @@ function PresenterTimer() {
                 <p className="text-sm text-destructive font-bold mt-2">TIME IS UP!</p>
             )}
         </div>
+    );
+}
+
+function PresenterResults() {
+    const { groupResults, isResultsVisible, toggleResults, refreshResults, loading } = useExamResults();
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/50 mb-4">
+                <CardTitle>Group Performance Results</CardTitle>
+                <Button variant={isResultsVisible ? 'secondary' : 'primary'} size="sm" onClick={toggleResults}>
+                    {isResultsVisible ? 'Hide Results' : 'Show Results'}
+                </Button>
+            </CardHeader>
+            {isResultsVisible && (
+                <CardContent className="space-y-4">
+                    <div className="flex justify-end">
+                        <Button variant="outline" size="sm" onClick={refreshResults} disabled={loading}>
+                            {loading ? 'Refreshing...' : 'Refresh Results'}
+                        </Button>
+                    </div>
+                    {groupResults.length === 0 && !loading ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No matching data available yet.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {groupResults.map(g => (
+                                <div key={g.groupId} className="p-5 bg-gradient-to-br from-secondary/5 to-secondary/20 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
+                                    <h3 className="font-bold text-lg tracking-tight mb-4">{g.groupName}</h3>
+                                    <div className="space-y-3 text-sm text-muted-foreground z-10 relative">
+                                        <div className="flex justify-between items-center">
+                                            <span>Participation:</span>
+                                            <span className="font-semibold text-foreground bg-primary/10 px-2 py-0.5 rounded text-primary">
+                                                {g.completedCount} / {g.studentCount}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span>Average Score:</span>
+                                            <span className="font-semibold text-foreground bg-primary/10 px-2 py-0.5 rounded text-primary">
+                                                {g.averageScore} / {g.maxScore}
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-secondary rounded-full h-2 mt-4 overflow-hidden shadow-inner">
+                                            <div 
+                                                className="bg-primary h-full transition-all duration-1000 ease-out" 
+                                                style={{ width: `${Math.min(100, (g.averageScore / g.maxScore) * 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Decorative background element */}
+                                    <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            )}
+        </Card>
     );
 }
