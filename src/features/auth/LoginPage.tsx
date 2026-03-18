@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/features/shared/providers/AuthProvider';
 import { Lock } from 'lucide-react';
 
 export default function LoginPage() {

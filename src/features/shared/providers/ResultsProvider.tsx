@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { resultService } from '@/services/result.service';
+import { examService } from '@/services/exam.service';
 import { MAX_POINTS_PER_CATEGORY, CATEGORIES } from '@/features/exam/questions';
 
 export interface StudentResult {
@@ -42,25 +43,10 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         try {
             // 1. Fetch Students & their associated Group information
-            const { data: studentsData, error: studentsError } = await supabase
-                .from('students')
-                .select(`
-                    id,
-                    name,
-                    group_id,
-                    groups (
-                        name
-                    )
-                `);
-
-            if (studentsError) throw studentsError;
+            const studentsData = await resultService.fetchStudentsWithGroups();
 
             // 2. Fetch all Submissions
-            const { data: submissionsData, error: submissionsError } = await supabase
-                .from('exam_submissions')
-                .select('id, student_id, total_score');
-
-            if (submissionsError) throw submissionsError;
+            const submissionsData = await resultService.fetchAllSubmissions();
 
             // 3. Aggregate logic
             const groupMap = new Map<number, { name: string, studentCount: number, students: StudentResult[] }>();
@@ -138,7 +124,7 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
     const deleteSubmission = async (submissionId: string) => {
         try {
             setLoading(true);
-            const { error } = await supabase.from('exam_submissions').delete().eq('id', submissionId);
+            const { error } = await examService.deleteSubmission(submissionId);
             if (error) throw error;
             await refreshResults();
         } catch (err) {

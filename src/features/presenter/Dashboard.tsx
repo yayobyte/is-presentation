@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
-import { useExamResults } from '@/providers/ResultsProvider';
+import { useExamResults } from '@/features/shared/providers/ResultsProvider';
 import SlideDeck from '@/features/talk/SlideDeck';
-import { Trash2, Download } from 'lucide-react';
+import { Trash2, Download, LayoutDashboard, Database } from 'lucide-react';
+import { Tabs } from '@/components/ui/Tabs';
+import ManagementView from './ManagementView';
 
 export default function PresenterDashboard() {
     const {
@@ -17,101 +19,118 @@ export default function PresenterDashboard() {
     // Enable sync as presenter (pushes changes)
     useSupabaseSync(true);
 
+    const [activeTab, setActiveTab] = useState('presentation');
+
     const handleStopExam = () => {
         if (window.confirm('Are you sure you want to STOP the exam for all students? This will prevent any further submissions.')) {
             stopExam();
         }
     };
 
+    const dashboardTabs = [
+        { id: 'presentation', label: 'Presentation Control', icon: <LayoutDashboard className="h-4 w-4" /> },
+        { id: 'management', label: 'Database Management', icon: <Database className="h-4 w-4" /> }
+    ];
+
     return (
         <MainLayout>
-            <div className="max-w-4xl mx-auto space-y-8">
-                {/* Live Preview */}
-                <Card className="overflow-hidden bg-background">
-                    <CardHeader>
-                        <CardTitle>Live Preview - What Students See</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex justify-center bg-muted/20 p-8">
-                        {/* 
-                          Container mimics a 16:9 screen. 
-                          We scale the SlideDeck down to fit. 
-                        */}
-                        <div className="relative w-full aspect-video border rounded-lg overflow-hidden shadow-sm bg-background">
-                            <div className="absolute inset-0 transform scale-[0.5] origin-top-left w-[200%] h-[200%] pointer-events-none">
-                                <SlideDeck />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="max-w-4xl mx-auto space-y-6">
+                <div className="flex justify-center">
+                    <Tabs 
+                        tabs={dashboardTabs} 
+                        activeTab={activeTab} 
+                        onTabChange={setActiveTab}
+                    />
+                </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Slide Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex gap-4 items-center justify-between">
-                        <Button onClick={() => setSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}>
-                            Previous
-                        </Button>
-                        <span className="text-4xl font-bold font-display w-20 text-center">{currentSlide}</span>
-                        <Button onClick={() => setSlide(currentSlide + 1)}>
-                            Next
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Session Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col space-y-4">
-                            {!examStarted && (
-                                <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-lg border border-border/50">
-                                    <input
-                                        type="checkbox"
-                                        id="timer-toggle"
-                                        checked={isTimerEnabled}
-                                        onChange={(e) => setTimerEnabled(e.target.checked)}
-                                        className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
-                                    />
-                                    <label htmlFor="timer-toggle" className="text-sm font-medium cursor-pointer">
-                                        Enable 20-minute counter for students
-                                    </label>
+                {activeTab === 'presentation' ? (
+                    <div className="space-y-8">
+                        {/* Live Preview */}
+                        <Card className="overflow-hidden bg-background">
+                            <CardHeader>
+                                <CardTitle>Live Preview - What Students See</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex justify-center bg-muted/20 p-8">
+                                <div className="relative w-full aspect-video border rounded-lg overflow-hidden shadow-sm bg-background">
+                                    <div className="absolute inset-0 transform scale-[0.5] origin-top-left w-[200%] h-[200%] pointer-events-none">
+                                        <SlideDeck />
+                                    </div>
                                 </div>
-                            )}
+                            </CardContent>
+                        </Card>
 
-                            <div className="flex gap-4">
-                                {examStarted ? (
-                                    <Button variant="destructive" size="lg" onClick={handleStopExam} className="w-full">Stop Exam</Button>
-                                ) : (
-                                    <Button size="lg" onClick={() => startExam()} className="w-full">
-                                        Start Exam {isTimerEnabled ? '(with 20m timer)' : '(no timer)'}
-                                    </Button>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Slide Control</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex gap-4 items-center justify-between">
+                                <Button onClick={() => setSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}>
+                                    Previous
+                                </Button>
+                                <span className="text-4xl font-bold font-display w-20 text-center">{currentSlide}</span>
+                                <Button onClick={() => setSlide(currentSlide + 1)}>
+                                    Next
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Session Control</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-col space-y-4">
+                                    {!examStarted && (
+                                        <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-lg border border-border/50">
+                                            <input
+                                                type="checkbox"
+                                                id="timer-toggle"
+                                                checked={isTimerEnabled}
+                                                onChange={(e) => setTimerEnabled(e.target.checked)}
+                                                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                                            />
+                                            <label htmlFor="timer-toggle" className="text-sm font-medium cursor-pointer">
+                                                Enable 20-minute counter for students
+                                            </label>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-4">
+                                        {examStarted ? (
+                                            <Button variant="destructive" size="lg" onClick={handleStopExam} className="w-full">Stop Exam</Button>
+                                        ) : (
+                                            <Button size="lg" onClick={() => startExam()} className="w-full">
+                                                Start Exam {isTimerEnabled ? '(with 20m timer)' : '(no timer)'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {examStarted && isTimerEnabled && (
+                                    <PresenterTimer />
                                 )}
-                            </div>
-                        </div>
+                                {examStarted && !isTimerEnabled && (
+                                    <div className="p-6 bg-secondary/10 rounded-xl border border-border/50 text-center">
+                                        <p className="text-sm font-medium text-muted-foreground">Exam is running WITHOUT a timer limit.</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                        {examStarted && isTimerEnabled && (
-                            <PresenterTimer />
-                        )}
-                        {examStarted && !isTimerEnabled && (
-                            <div className="p-6 bg-secondary/10 rounded-xl border border-border/50 text-center">
-                                <p className="text-sm font-medium text-muted-foreground">Exam is running WITHOUT a timer limit.</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        <PresenterResults />
 
-                <PresenterResults />
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Links</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex gap-4">
-                        <Button variant="outline" onClick={() => window.open('/student', '_blank')}>Open Student View</Button>
-                    </CardContent>
-                </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Quick Links</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex gap-4">
+                                <Button variant="outline" onClick={() => window.open('/student', '_blank')}>Open Student View</Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                ) : (
+                    <ManagementView />
+                )}
             </div>
         </MainLayout>
     );

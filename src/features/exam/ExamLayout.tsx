@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { QUESTIONS, CATEGORIES, MAX_POINTS_PER_CATEGORY } from './questions';
 import type { Question, QuestionOption } from './questions';
-import { supabase } from '@/lib/supabase';
+import { authService } from '@/services/auth.service';
+import { examService } from '@/services/exam.service';
 import { usePresentationStore } from '@/store/presentationStore';
 import ResultsView from './ResultsView';
 import { ChevronLeft, ChevronRight, User, AlertCircle, Clock } from 'lucide-react';
@@ -120,7 +121,7 @@ export default function ExamLayout() {
         setCurrentCategoryScores(categoryScores);
 
         try {
-            await supabase.from('exam_submissions').insert({
+            await examService.submitExam({
                 student_id: studentId,
                 student_name: studentName,
                 answers,
@@ -160,34 +161,25 @@ export default function ExamLayout() {
 
         try {
             // Check if student exists in the database
-            const { data: student, error: fetchError } = await supabase
-                .from('students')
-                .select('name')
-                .eq('id', studentId.trim())
-                .single();
+            const { student, error: fetchError } = await authService.validateStudent(studentId);
 
             if (fetchError || !student) {
-                setError('Student ID not found. Please check your document number.');
+                setError(fetchError || 'Student ID not found.');
                 setValidating(false);
                 return;
             }
 
             // Check if student already submitted
-            const { data: existing } = await supabase
-                .from('exam_submissions')
-                .select('student_name, answers, category_scores')
-                .eq('student_id', studentId.trim())
-                .order('submitted_at', { ascending: false })
-                .limit(1);
+            const { data: existing } = await examService.getPreviousSubmission(studentId);
 
-            if (existing && existing.length > 0) {
+            if (existing) {
                 // Instead of blocking, prepare to show previous results
                 setPreviousResults({
-                    answers: existing[0].answers,
-                    name: existing[0].student_name,
-                    categoryScores: existing[0].category_scores
+                    answers: existing.answers,
+                    name: existing.student_name,
+                    categoryScores: existing.category_scores
                 });
-                setStudentName(existing[0].student_name);
+                setStudentName(existing.student_name);
             } else {
                 setStudentName(student.name);
                 setPreviousResults(null);

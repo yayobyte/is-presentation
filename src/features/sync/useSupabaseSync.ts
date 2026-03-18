@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { presentationService } from '@/services/presentation.service';
 import { usePresentationStore } from '@/store/presentationStore';
 
 export function useSupabaseSync(isPresenter: boolean) {
@@ -13,11 +13,7 @@ export function useSupabaseSync(isPresenter: boolean) {
     // Initial fetch to find the singleton row ID
     useEffect(() => {
         const discoverRow = async () => {
-            const { data, error } = await supabase
-                .from('presentation_state')
-                .select('id, current_slide, is_exam_started, exam_start_time, is_timer_enabled')
-                .limit(1)
-                .maybeSingle();
+            const { data, error } = await presentationService.fetchInitialState();
 
             if (data) {
                 setRowId(data.id);
@@ -38,40 +34,30 @@ export function useSupabaseSync(isPresenter: boolean) {
     useEffect(() => {
         if (rowId === null) return;
 
-        const channel = supabase
-            .channel('presentation_sync')
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'presentation_state', filter: `id=eq.${rowId}` },
-                (payload) => {
-                    const newState = payload.new;
-                    console.log('Received update:', newState);
+        const channel = presentationService.subscribeToChanges(rowId, (newState) => {
+            console.log('Received update:', newState);
 
-                    if (newState.current_slide !== undefined) {
-                        if (!isPresenter) {
-                            setSlide(newState.current_slide);
-                        }
-                    }
-
-                    if (newState.is_exam_started !== undefined) {
-                        if (newState.is_exam_started) {
-                            const serverStartTime = newState.exam_start_time;
-                            const timerEnabled = newState.is_timer_enabled;
-                            startExam(serverStartTime, timerEnabled);
-                        } else if (!newState.is_exam_started) {
-                            stopExam();
-                        }
-                    }
+            if (newState.current_slide !== undefined) {
+                if (!isPresenter) {
+                    setSlide(newState.current_slide);
                 }
-            )
-            .subscribe();
+            }
+
+            if (newState.is_exam_started !== undefined) {
+                if (newState.is_exam_started) {
+                    const serverStartTime = newState.exam_start_time;
+                    const timerEnabled = newState.is_timer_enabled;
+                    startExam(serverStartTime, timerEnabled);
+                } else if (!newState.is_exam_started) {
+                    stopExam();
+                }
+            }
+        });
 
         channelRef.current = channel;
 
         return () => {
-            if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
-            }
+            presentationService.unsubscribe(channelRef.current);
         };
     }, [isPresenter, setSlide, startExam, stopExam, rowId]);
 
@@ -87,22 +73,13 @@ export function useSupabaseSync(isPresenter: boolean) {
                 is_timer_enabled: isTimerEnabled
             };
 
-            // If we have an ID, update it. Otherwise, upsert to create the first row.
-            const query = rowId
-                ? supabase.from('presentation_state').update(updatePayload).eq('id', rowId)
-                : supabase.from('presentation_state').upsert({ id: rowId || undefined, ...updatePayload }).select('id').single();
-
-            const { data, error } = await query as any;
+            const { data, error } = await presentationService.updateState(rowId, updatePayload);
 
             if (error) {
                 // Fallback for missing column
                 if (error.code === 'PGRST204') {
                     const { is_timer_enabled, ...fallbackPayload } = updatePayload;
-                    const fallbackQuery = rowId
-                        ? supabase.from('presentation_state').update(fallbackPayload).eq('id', rowId)
-                        : supabase.from('presentation_state').upsert({ id: rowId || undefined, ...fallbackPayload }).select('id').single();
-
-                    const { data: fbData } = await fallbackQuery as any;
+                    const { data: fbData } = await presentationService.updateStateFallback(rowId, fallbackPayload);
                     if (!rowId && fbData) setRowId(fbData.id);
                 } else {
                     console.error('Error updating state:', error);
