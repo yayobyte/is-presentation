@@ -20,9 +20,12 @@ export const groupService = {
         const { data, error } = await supabase
             .from('groups')
             .insert({ name })
-            .select()
-            .single();
-        return { data, error };
+            .select();
+        
+        return { 
+            data: data ? data[0] : null, 
+            error 
+        };
     },
 
     async updateGroup(id: number, name: string): Promise<{ error: Error | null }> {

@@ -14,6 +14,7 @@ export default function ManagementView() {
     const [isAddingStudent, setIsAddingStudent] = useState(false);
     const [newStudent, setNewStudent] = useState<Student>({ id: '', name: '', group_id: null });
     const [newGroupName, setNewGroupName] = useState('');
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -64,14 +65,21 @@ export default function ManagementView() {
 
     const handleAddGroup = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newGroupName.trim()) return;
-        const { error } = await groupService.createGroup(newGroupName.trim());
-        if (error) {
-            console.error('Error creating group:', error);
-            alert(`Error creating group: ${error.message}`);
-        } else {
-            setNewGroupName('');
-            fetchData();
+        const name = newGroupName.trim();
+        if (!name) return;
+        
+        setIsCreatingGroup(true);
+        try {
+            const { error } = await groupService.createGroup(name);
+            if (error) {
+                console.error('Error creating group:', error);
+                alert(`Error creating group: ${error.message}`);
+            } else {
+                setNewGroupName('');
+                await fetchData();
+            }
+        } finally {
+            setIsCreatingGroup(false);
         }
     };
 
@@ -116,9 +124,16 @@ export default function ManagementView() {
                                 value={newGroupName}
                                 onChange={(e) => setNewGroupName(e.target.value)}
                                 placeholder="Group Name"
-                                className="flex-1 bg-background border border-input rounded-md px-3 py-1 text-sm"
+                                disabled={isCreatingGroup}
+                                className="flex-1 bg-background border border-input rounded-md px-3 py-1 text-sm disabled:opacity-50"
                             />
-                            <Button type="submit" size="sm"><Plus className="h-4 w-4" /></Button>
+                            <Button type="submit" size="sm" disabled={isCreatingGroup || !newGroupName.trim()}>
+                                {isCreatingGroup ? (
+                                    <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <Plus className="h-4 w-4" />
+                                )}
+                            </Button>
                         </form>
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                             {loading && <p className="text-xs text-center py-4 text-muted-foreground animate-pulse">Loading groups...</p>}
