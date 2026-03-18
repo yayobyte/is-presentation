@@ -18,21 +18,24 @@ export const presentationService = {
         return { data, error };
     },
 
-    async updateState(rowId: number | null, payload: PresentationStatePayload): Promise<{ data: { id: number } | null; error: any }> {
-        const query = rowId
-            ? supabase.from('presentation_state').update(payload).eq('id', rowId).select('id').maybeSingle()
-            : supabase.from('presentation_state').upsert({ id: rowId || undefined, ...payload }).select('id').single();
+    async updateState(payload: PresentationStatePayload): Promise<{ data: { id: number } | null; error: any }> {
+        // Force the use of ID 1 to maintain a singleton state
+        const { data, error } = await supabase
+            .from('presentation_state')
+            .upsert({ id: 1, ...payload })
+            .select('id')
+            .single();
 
-        const { data, error } = await query as any;
         return { data, error };
     },
 
-    async updateStateFallback(rowId: number | null, fallbackPayload: any): Promise<{ data: { id: number } | null }> {
-        const fallbackQuery = rowId
-            ? supabase.from('presentation_state').update(fallbackPayload).eq('id', rowId).select('id').maybeSingle()
-            : supabase.from('presentation_state').upsert({ id: rowId || undefined, ...fallbackPayload }).select('id').single();
+    async updateStateFallback(fallbackPayload: any): Promise<{ data: { id: number } | null }> {
+        const { data } = await supabase
+            .from('presentation_state')
+            .upsert({ id: 1, ...fallbackPayload })
+            .select('id')
+            .single();
 
-        const { data } = await fallbackQuery as any;
         return { data };
     },
 

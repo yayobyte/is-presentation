@@ -15,7 +15,9 @@ create table if not exists public.presentation_state (
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Initialize state if table is empty
+-- Ensure only one row exists (ID=1)
+delete from public.presentation_state where id <> 1;
+
 insert into public.presentation_state (id, current_slide, is_exam_started)
 overriding system value
 select 1, 0, false
