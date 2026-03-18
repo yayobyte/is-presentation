@@ -93,3 +93,16 @@ on public.students for select
 to public
 using (true);
 
+create policy "Allow management of students"
+on public.students for all
+to public
+using (true)
+with check (true);
+
+-- Group policies
+create policy "Allow management of groups"
+on public.groups for all
+to public
+using (true)
+with check (true);
+

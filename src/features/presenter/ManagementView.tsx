@@ -11,6 +11,8 @@ export default function ManagementView() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+    const [isAddingStudent, setIsAddingStudent] = useState(false);
+    const [newStudent, setNewStudent] = useState<Student>({ id: '', name: '', group_id: null });
     const [newGroupName, setNewGroupName] = useState('');
 
     const fetchData = async () => {
@@ -36,8 +38,12 @@ export default function ManagementView() {
     const handleDeleteStudent = async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this student? Data remains in results unless manually cleared.')) return;
         const { error } = await studentService.deleteStudent(id);
-        if (error) alert('Error deleting student');
-        else fetchData();
+        if (error) {
+            console.error('Error deleting student:', error);
+            alert(`Error deleting student: ${error.message}`);
+        } else {
+            fetchData();
+        }
     };
 
     const handleUpdateStudent = async (e: React.FormEvent) => {
@@ -47,8 +53,10 @@ export default function ManagementView() {
             name: editingStudent.name,
             group_id: editingStudent.group_id
         });
-        if (error) alert('Error updating student');
-        else {
+        if (error) {
+            console.error('Error updating student:', error);
+            alert(`Error updating student: ${error.message}`);
+        } else {
             setEditingStudent(null);
             fetchData();
         }
@@ -58,22 +66,41 @@ export default function ManagementView() {
         e.preventDefault();
         if (!newGroupName.trim()) return;
         const { error } = await groupService.createGroup(newGroupName.trim());
-        if (error) alert('Error creating group');
-        else {
+        if (error) {
+            console.error('Error creating group:', error);
+            alert(`Error creating group: ${error.message}`);
+        } else {
             setNewGroupName('');
             fetchData();
         }
     };
 
-    const filteredStudents = students.filter(s => 
-        s.name.toLowerCase().includes(search.toLowerCase()) || 
+    const handleCreateStudent = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newStudent.id || !newStudent.name) {
+            alert('Please provide both an ID and a Name.');
+            return;
+        }
+        const { error } = await studentService.createStudent(newStudent);
+        if (error) {
+            console.error('Error creating student:', error);
+            alert(`Error creating student: ${error.message}`);
+        } else {
+            setIsAddingStudent(false);
+            setNewStudent({ id: '', name: '', group_id: null });
+            fetchData();
+        }
+    };
+
+    const filteredStudents = students.filter(s =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.id.includes(search) ||
         s.group_name?.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid gap-6">
                 {/* Groups Management */}
                 <Card className="md:col-span-1 h-fit">
                     <CardHeader>
@@ -84,8 +111,8 @@ export default function ManagementView() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <form onSubmit={handleAddGroup} className="flex gap-2">
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 value={newGroupName}
                                 onChange={(e) => setNewGroupName(e.target.value)}
                                 placeholder="Group Name"
@@ -106,21 +133,35 @@ export default function ManagementView() {
                 </Card>
 
                 {/* Students Management */}
-                <Card className="md:col-span-2">
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="flex items-center gap-2">
                             <UserPlus className="h-5 w-5" />
                             Students
                         </CardTitle>
-                        <div className="relative w-48">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <input 
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search students..."
-                                className="w-full pl-8 pr-3 py-2 text-xs bg-muted/50 border border-input rounded-md focus:ring-1 focus:ring-primary outline-none"
-                            />
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-48">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search students..."
+                                    className="w-full pl-8 pr-8 py-2 text-xs bg-muted/50 border border-input rounded-md focus:ring-1 focus:ring-primary outline-none"
+                                />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <Button size="sm" onClick={() => setIsAddingStudent(true)} className="gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Add Student
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -149,17 +190,17 @@ export default function ManagementView() {
                                                 </span>
                                             </td>
                                             <td className="py-3 text-right space-x-1">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     className="h-8 w-8 p-0"
                                                     onClick={() => setEditingStudent(s)}
                                                 >
                                                     <Edit2 className="h-4 w-4" />
                                                 </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                                                     onClick={() => handleDeleteStudent(s.id)}
                                                 >
@@ -180,7 +221,7 @@ export default function ManagementView() {
                 </Card>
             </div>
 
-            {/* Edit Student Modal-like Overlay */}
+            {/* Edit Student Modal */}
             {editingStudent && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-md shadow-2xl">
@@ -196,17 +237,17 @@ export default function ManagementView() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Name</label>
-                                    <input 
-                                        value={editingStudent.name} 
-                                        onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                                    <input
+                                        value={editingStudent.name}
+                                        onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
                                         className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Assign Group</label>
-                                    <select 
+                                    <select
                                         value={editingStudent.group_id || ''}
-                                        onChange={(e) => setEditingStudent({...editingStudent, group_id: e.target.value ? parseInt(e.target.value) : null})}
+                                        onChange={(e) => setEditingStudent({ ...editingStudent, group_id: e.target.value ? parseInt(e.target.value) : null })}
                                         className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
                                     >
                                         <option value="">No Group</option>
@@ -218,6 +259,57 @@ export default function ManagementView() {
                                 <div className="flex justify-end gap-2 pt-4">
                                     <Button type="button" variant="outline" onClick={() => setEditingStudent(null)}>Cancel</Button>
                                     <Button type="submit">Save Changes</Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Add Student Modal */}
+            {isAddingStudent && (
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md shadow-2xl">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Add New Student</CardTitle>
+                            <Button variant="ghost" size="sm" onClick={() => setIsAddingStudent(false)}><X className="h-4 w-4" /></Button>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleCreateStudent} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Student ID (Internal identifier)</label>
+                                    <input
+                                        value={newStudent.id}
+                                        onChange={(e) => setNewStudent({ ...newStudent, id: e.target.value })}
+                                        placeholder="e.g. STU123"
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Full Name</label>
+                                    <input
+                                        value={newStudent.name}
+                                        onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                                        placeholder="Enter student name"
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Assign Group</label>
+                                    <select
+                                        value={newStudent.group_id || ''}
+                                        onChange={(e) => setNewStudent({ ...newStudent, group_id: e.target.value ? parseInt(e.target.value) : null })}
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                                    >
+                                        <option value="">No Group</option>
+                                        {groups.map(g => (
+                                            <option key={g.id} value={g.id}>{g.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-2 pt-4">
+                                    <Button type="button" variant="outline" onClick={() => setIsAddingStudent(false)}>Cancel</Button>
+                                    <Button type="submit">Create Student</Button>
                                 </div>
                             </form>
                         </CardContent>
