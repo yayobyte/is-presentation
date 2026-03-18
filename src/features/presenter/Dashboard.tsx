@@ -6,6 +6,7 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
 import { useExamResults } from '@/providers/ResultsProvider';
 import SlideDeck from '@/features/talk/SlideDeck';
+import { Trash2 } from 'lucide-react';
 
 export default function PresenterDashboard() {
     const {
@@ -161,7 +162,7 @@ function PresenterTimer() {
 }
 
 function PresenterResults() {
-    const { groupResults, isResultsVisible, toggleResults, refreshResults, loading } = useExamResults();
+    const { groupResults, isResultsVisible, toggleResults, refreshResults, loading, deleteSubmission } = useExamResults();
 
     return (
         <Card>
@@ -181,31 +182,65 @@ function PresenterResults() {
                     {groupResults.length === 0 && !loading ? (
                         <p className="text-sm text-muted-foreground text-center py-8">No matching data available yet.</p>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {groupResults.map(g => (
-                                <div key={g.groupId} className="p-5 bg-gradient-to-br from-secondary/5 to-secondary/20 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
-                                    <h3 className="font-bold text-lg tracking-tight mb-4">{g.groupName}</h3>
+                        <div className="grid grid-cols-1 gap-6">
+                            {groupResults.map(group => (
+                                <div key={group.groupId} className="p-5 bg-gradient-to-br from-secondary/5 to-secondary/20 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
+                                    <h3 className="font-bold text-lg tracking-tight mb-4">{group.groupName}</h3>
                                     <div className="space-y-3 text-sm text-muted-foreground z-10 relative">
                                         <div className="flex justify-between items-center">
                                             <span>Participation:</span>
                                             <span className="font-semibold text-foreground bg-primary/10 px-2 py-0.5 rounded text-primary">
-                                                {g.completedCount} / {g.studentCount}
+                                                {group.completedCount} / {group.studentCount}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span>Average Score:</span>
                                             <span className="font-semibold text-foreground bg-primary/10 px-2 py-0.5 rounded text-primary">
-                                                {g.averageScore} / {g.maxScore}
+                                                {group.averageScore} / {group.maxScore}
                                             </span>
                                         </div>
                                         <div className="w-full bg-secondary rounded-full h-2 mt-4 overflow-hidden shadow-inner">
-                                            <div 
-                                                className="bg-primary h-full transition-all duration-1000 ease-out" 
-                                                style={{ width: `${Math.min(100, (g.averageScore / g.maxScore) * 100)}%` }}
+                                            <div
+                                                className="bg-primary h-full transition-all duration-1000 ease-out"
+                                                style={{ width: `${Math.min(100, (group.averageScore / group.maxScore) * 100)}%` }}
                                             />
                                         </div>
                                     </div>
-                                    
+
+                                    {/* Student List */}
+                                    {group.students.length > 0 && (
+                                        <div className="mt-6 pt-4 border-t border-border/50 relative z-10">
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Individual Results ({group.students.length})</h4>
+                                            <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                                {group.students.map(student => (
+                                                    <li key={student.submissionId} className="flex justify-between items-center text-sm p-2 rounded bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
+                                                        <div className="truncate pr-2">
+                                                            <span className="font-medium text-foreground block truncate" title={student.studentName}>{student.studentName}</span>
+                                                            <span className="text-xs text-muted-foreground">{student.studentId}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <span className="font-mono bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-semibold">
+                                                                {(student.score / group.maxScore * 100).toFixed(0)}%
+                                                            </span>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                onClick={() => {
+                                                                    if (window.confirm(`Are you sure you want to delete ${student.studentName}'s result?`)) {
+                                                                        deleteSubmission(student.submissionId);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
                                     {/* Decorative background element */}
                                     <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
                                 </div>

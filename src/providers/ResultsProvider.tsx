@@ -1,6 +1,14 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { MAX_POINTS_PER_CATEGORY, CATEGORIES } from '@/features/exam/questions';
+
+export interface StudentResult {
+    studentId: string;
+    studentName: string;
+    score: number;
+    submissionId: string;
+}
 
 export interface GroupResult {
     groupId: number;
@@ -9,6 +17,7 @@ export interface GroupResult {
     completedCount: number;
     averageScore: number;
     maxScore: number;
+    students: StudentResult[];
 }
 
 interface ResultsContextType {
@@ -17,6 +26,7 @@ interface ResultsContextType {
     loading: boolean;
     toggleResults: () => void;
     refreshResults: () => Promise<void>;
+    deleteSubmission: (submissionId: string) => Promise<void>;
 }
 
 const ResultsContext = createContext<ResultsContextType | undefined>(undefined);
@@ -36,6 +46,7 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
                 .from('students')
                 .select(`
                     id,
+                    name,
                     group_id,
                     groups (
                         name
@@ -47,12 +58,12 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
             // 2. Fetch all Submissions
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('exam_submissions')
-                .select('student_id, total_score');
+                .select('id, student_id, total_score');
 
             if (submissionsError) throw submissionsError;
 
             // 3. Aggregate logic
-            const groupMap = new Map<number, { name: string, studentCount: number, completedCount: number, totalScore: number }>();
+            const groupMap = new Map<number, { name: string, studentCount: number, students: StudentResult[] }>();
 
             // Initialize all known groups from the student list
             studentsData?.forEach((student: any) => {
@@ -61,41 +72,49 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
                 if (!gId || !student.groups) return;
                 
                 if (!groupMap.has(gId)) {
-                    groupMap.set(gId, { name: student.groups.name, studentCount: 0, completedCount: 0, totalScore: 0 });
+                    groupMap.set(gId, { name: student.groups.name, studentCount: 0, students: [] });
                 }
-                const g = groupMap.get(gId)!;
-                g.studentCount += 1;
+                const group = groupMap.get(gId)!;
+                group.studentCount += 1;
             });
 
             // Map submissions against students
-            const submissionScoresByStudent = new Map<string, number>();
-            // If a student submitted multiple times, we might keep the latest or highest. 
-            // In the actual app, we just keep whatever they submitted (or the last one).
+            const submissionsByStudent = new Map<string, any>();
             submissionsData?.forEach(sub => {
-                submissionScoresByStudent.set(sub.student_id, sub.total_score);
+                submissionsByStudent.set(sub.student_id, sub);
             });
 
             studentsData?.forEach((student: any) => {
                 const gId = student.group_id;
                 if (!gId || !student.groups) return;
                 
-                const score = submissionScoresByStudent.get(student.id);
-                if (score !== undefined) {
-                    const g = groupMap.get(gId)!;
-                    g.completedCount += 1;
-                    g.totalScore += score;
+                const sub = submissionsByStudent.get(student.id);
+                if (sub !== undefined) {
+                    const group = groupMap.get(gId)!;
+                    group.students.push({
+                        studentId: student.id,
+                        studentName: student.name,
+                        score: sub.total_score,
+                        submissionId: sub.id
+                    });
                 }
             });
 
-            const results: GroupResult[] = Array.from(groupMap.entries()).map(([groupId, data]) => {
-                const avg = data.completedCount > 0 ? (data.totalScore / data.completedCount) : 0;
+            const results: GroupResult[] = Array.from(groupMap.entries()).map(([groupId, groupData]) => {
+                const totalScore = groupData.students.reduce((acc, student) => acc + student.score, 0);
+                const avg = groupData.students.length > 0 ? (totalScore / groupData.students.length) : 0;
+                
+                // Sort students by score descending
+                const sortedStudents = [...groupData.students].sort((a, b) => b.score - a.score);
+
                 return {
                     groupId,
-                    groupName: data.name,
-                    studentCount: data.studentCount,
-                    completedCount: data.completedCount,
+                    groupName: groupData.name,
+                    studentCount: groupData.studentCount,
+                    completedCount: groupData.students.length,
                     averageScore: Number(avg.toFixed(1)), // Keep 1 decimal
-                    maxScore: 27 // Hardcoded based on current MAX_POINTS_PER_CATEGORY * categories
+                    maxScore: MAX_POINTS_PER_CATEGORY * CATEGORIES.length,
+                    students: sortedStudents
                 };
             });
 
@@ -116,8 +135,20 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
         refreshResults();
     }, [refreshResults]);
 
+    const deleteSubmission = async (submissionId: string) => {
+        try {
+            setLoading(true);
+            const { error } = await supabase.from('exam_submissions').delete().eq('id', submissionId);
+            if (error) throw error;
+            await refreshResults();
+        } catch (err) {
+            console.error('Failed to delete submission:', err);
+            setLoading(false);
+        }
+    };
+
     return (
-        <ResultsContext.Provider value={{ groupResults, isResultsVisible, loading, toggleResults, refreshResults }}>
+        <ResultsContext.Provider value={{ groupResults, isResultsVisible, loading, toggleResults, refreshResults, deleteSubmission }}>
             {children}
         </ResultsContext.Provider>
     );
