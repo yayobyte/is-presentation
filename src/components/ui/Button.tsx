@@ -24,9 +24,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                         'border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground': variant === 'outline',
                         'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
                         'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90': variant === 'destructive',
-                        'h-9 px-4 py-2 text-sm': size === 'sm',
-                        'h-10 px-8 py-2': size === 'md',
-                        'h-12 px-10 text-lg': size === 'lg',
+                        'min-h-9 px-4 py-2 text-sm': size === 'sm',
+                        'min-h-10 px-8 py-2': size === 'md',
+                        'min-h-12 px-10 text-lg': size === 'lg',
                         'h-9 w-9': size === 'icon',
                     },
                     className

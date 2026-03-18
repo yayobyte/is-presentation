@@ -6,7 +6,7 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSupabaseSync } from '@/features/sync/useSupabaseSync';
 import { useExamResults } from '@/providers/ResultsProvider';
 import SlideDeck from '@/features/talk/SlideDeck';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Download } from 'lucide-react';
 
 export default function PresenterDashboard() {
     const {
@@ -164,6 +164,69 @@ function PresenterTimer() {
 function PresenterResults() {
     const { groupResults, isResultsVisible, toggleResults, refreshResults, loading, deleteSubmission } = useExamResults();
 
+    const handleExportAllCSV = () => {
+        if (groupResults.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+
+        const headers = ['Group', 'Student ID', 'Student Name', 'Score', 'Max Score', 'Percentage'];
+        const rows = groupResults.flatMap(group =>
+            group.students.map(student => [
+                `"${group.groupName}"`,
+                student.studentId,
+                `"${student.studentName}"`,
+                student.score,
+                group.maxScore,
+                `${((student.score / group.maxScore) * 100).toFixed(0)}%`
+            ])
+        );
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(r => r.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `all_groups_results.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleExportCSV = (group: any) => {
+        if (!group.students || group.students.length === 0) {
+            alert('No data to export for this group.');
+            return;
+        }
+
+        const headers = ['Student ID', 'Student Name', 'Score', 'Max Score', 'Percentage'];
+        const rows = group.students.map((s: any) => [
+            s.studentId,
+            `"${s.studentName}"`, // Quote names for safety
+            s.score,
+            group.maxScore,
+            `${((s.score / group.maxScore) * 100).toFixed(0)}%`
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map((r: any) => r.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${group.groupName.replace(/\s+/g, '_')}_results.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/50 mb-4">
@@ -174,8 +237,18 @@ function PresenterResults() {
             </CardHeader>
             {isResultsVisible && (
                 <CardContent className="space-y-4">
-                    <div className="flex justify-end">
-                        <Button variant="outline" size="sm" onClick={refreshResults} disabled={loading}>
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportAllCSV}
+                            disabled={loading || groupResults.length === 0}
+                            className="bg-primary/5 hover:bg-primary/10 border-primary/20 min-h-9 w-full sm:w-auto"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Export All Groups
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={refreshResults} disabled={loading} className="min-h-9 w-full sm:w-auto">
                             {loading ? 'Refreshing...' : 'Refresh Results'}
                         </Button>
                     </div>
@@ -185,7 +258,18 @@ function PresenterResults() {
                         <div className="grid grid-cols-1 gap-6">
                             {groupResults.map(group => (
                                 <div key={group.groupId} className="p-5 bg-gradient-to-br from-secondary/5 to-secondary/20 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
-                                    <h3 className="font-bold text-lg tracking-tight mb-4">{group.groupName}</h3>
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                                        <h3 className="font-bold text-lg tracking-tight">{group.groupName}</h3>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleExportCSV(group)}
+                                            className="gap-2 bg-background/50 backdrop-blur-sm min-h-9"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            Export
+                                        </Button>
+                                    </div>
                                     <div className="space-y-3 text-sm text-muted-foreground z-10 relative">
                                         <div className="flex justify-between items-center">
                                             <span>Participation:</span>

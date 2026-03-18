@@ -38,6 +38,11 @@ on public.presentation_state for update
 to public
 using (true); 
 
+create policy "Allow insert on presentation_state"
+on public.presentation_state for insert
+to public
+with check (true); 
+
 create policy "Allow student submissions"
 on public.exam_submissions for insert
 to public
@@ -45,6 +50,11 @@ with check (true);
 
 create policy "Allow presenter to read submissions"
 on public.exam_submissions for select
+to public
+using (true);
+
+create policy "Allow delete submissions"
+on public.exam_submissions for delete
 to public
 using (true);
 
