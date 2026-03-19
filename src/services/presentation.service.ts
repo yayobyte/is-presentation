@@ -44,7 +44,7 @@ export const presentationService = {
             .channel('presentation_sync')
             .on(
                 'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'presentation_state', filter: `id=eq.${rowId}` },
+                { event: '*', schema: 'public', table: 'presentation_state', filter: `id=eq.${rowId}` },
                 (payload) => callback(payload.new)
             )
             .subscribe();
